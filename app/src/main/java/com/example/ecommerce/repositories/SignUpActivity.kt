@@ -73,7 +73,6 @@ class SignUpActivity : ComponentActivity() {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // Title
                 Text(
                     text = "Create Account",
                     fontFamily = Montserrat,
@@ -85,7 +84,6 @@ class SignUpActivity : ComponentActivity() {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Email field
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
@@ -131,7 +129,6 @@ class SignUpActivity : ComponentActivity() {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Confirm password field
                 OutlinedTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
@@ -155,14 +152,12 @@ class SignUpActivity : ComponentActivity() {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Show error if any
                 if (errorMessage.isNotEmpty()) {
                     Text(text = errorMessage, color = Color.Red)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Sign Up button
                 Button(
                     onClick = {
                         if (password != confirmPassword) {
@@ -170,6 +165,8 @@ class SignUpActivity : ComponentActivity() {
                             return@Button
                         }
 
+                        println("password $password")
+                        println("email $email")
                         isLoading = true
                         firebaseAuth.createUserWithEmailAndPassword(email, password)
                             .addOnCompleteListener { task ->
@@ -180,7 +177,6 @@ class SignUpActivity : ComponentActivity() {
                                         "email" to user?.email,
                                         "uid" to user?.uid
                                     )
-
                                     user?.uid?.let {
                                         firestore.collection("users").document(it).set(userData)
                                             .addOnSuccessListener {

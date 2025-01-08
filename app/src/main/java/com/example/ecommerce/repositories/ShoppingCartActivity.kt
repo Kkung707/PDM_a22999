@@ -5,25 +5,45 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.HorizontalAlignmentLine
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.rememberImagePainter
 import com.example.ecommerce.models.CartItem
+import com.example.ecommerce.ui.Charcoal
+import com.example.ecommerce.ui.CharcoalLight
+import com.example.ecommerce.ui.Cream
+import com.example.ecommerce.ui.CreamDark
+import com.example.ecommerce.ui.EbonyLight
+import com.example.ecommerce.ui.Montserrat
+import com.example.ecommerce.ui.MyApplicationTheme
+import com.example.ecommerce.ui.Sage
+import com.example.ecommerce.ui.SageLight
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
+import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
 import java.util.LinkedList
+import java.util.UUID
 
 class ShoppingCartActivity : ComponentActivity() {
 
@@ -39,22 +59,13 @@ class ShoppingCartActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun ShoppingCartScreen() {
-        // 1) We store cart items in a LinkedList, wrapped in a mutableStateOf
         val cartItemsState = remember { mutableStateOf(LinkedList<CartItem>()) }
-        // For convenience:
         val cartItems: LinkedList<CartItem> = cartItemsState.value
-
-        // 2) Store the list of all items from Firestore's "Articles" collection
         val allItemsState = remember { mutableStateOf<List<CartItem>>(emptyList()) }
-
-        // 3) Track whether the cart bottom sheet is open
         var isCartOpen by remember { mutableStateOf(false) }
-
-        // 4) For user-sharing logic: fetch user emails from the "User" collection
         var usersList by remember { mutableStateOf<List<String>>(emptyList()) }
         var receiverEmail by remember { mutableStateOf("") }
 
-        // Load articles from "Articles"
         LaunchedEffect(Unit) {
             FirebaseFirestore.getInstance().collection("Articles")
                 .get()
@@ -65,7 +76,6 @@ class ShoppingCartActivity : ComponentActivity() {
                             val price = doc.getDouble("price") ?: 0.0
                             val qtyInStock = doc.getLong("quantityInStock")?.toInt() ?: 0
                             val imageUrl = doc.getString("imageUrl") ?: ""
-                            // Convert Firestore fields to CartItem
                             CartItem(name, price, qtyInStock, imageUrl)
                         }
                         allItemsState.value = fetched
@@ -78,9 +88,10 @@ class ShoppingCartActivity : ComponentActivity() {
                 }
         }
 
-        // Load user emails from "User"
+        val currentUserId = firebaseAuth.currentUser?.uid ?: ""
         LaunchedEffect(Unit) {
-            FirebaseFirestore.getInstance().collection("User")
+            FirebaseFirestore.getInstance().collection("users")
+                .whereNotEqualTo("uid", currentUserId)
                 .get()
                 .addOnSuccessListener { snapshot ->
                     if (!snapshot.isEmpty) {
@@ -97,27 +108,34 @@ class ShoppingCartActivity : ComponentActivity() {
                 }
         }
 
-        // Main UI layout
-        Box(modifier = Modifier.fillMaxSize()) {
-            // The "shop" content
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(EbonyLight),
+        ) {
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                Text(text = "Articles for Sale", style = MaterialTheme.typography.titleLarge)
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+
+                ) {
+                Text(
+                    text = "Articles for Sale",
+                    fontFamily = Montserrat,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Cream,
+                    fontSize = 32.sp,
+                )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Show list of all items (articles)
                 LazyColumn {
                     items(allItemsState.value) { article ->
-                        // For each article, we show an "Add to Cart" button
                         ArticleItem(
                             article = article,
                             onAddToCart = {
-                                // 5) To add an item to a LinkedList and get recomposition:
-                                // Create a new list from the old one, mutate it, then reassign
                                 val newList = LinkedList(cartItems)
                                 newList.add(article)
                                 cartItemsState.value = newList
@@ -125,7 +143,9 @@ class ShoppingCartActivity : ComponentActivity() {
                                 Toast.makeText(
                                     this@ShoppingCartActivity,
                                     "${article.name} added to cart",
+
                                     Toast.LENGTH_SHORT
+
                                 ).show()
                             }
                         )
@@ -133,26 +153,23 @@ class ShoppingCartActivity : ComponentActivity() {
                 }
             }
 
-            // A FloatingActionButton to open the cart sheet
             FloatingActionButton(
                 onClick = { isCartOpen = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
+                containerColor = SageLight,
+                contentColor = Cream,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(16.dp)
+                    .padding(16.dp),
             ) {
                 Text("Cart")
             }
 
-            // If cart is open, show bottom sheet with cart
             if (isCartOpen) {
                 ModalBottomSheet(
                     onDismissRequest = { isCartOpen = false }
                 ) {
-                    // 6) Pass the linked list to the bottom sheet
                     CartBottomSheetContent(
-                        cartItems = cartItems,           // the LinkedList
+                        cartItems = cartItems,
                         receiverEmail = receiverEmail,
                         usersList = usersList,
                         onSelectEmail = { receiverEmail = it },
@@ -174,7 +191,7 @@ class ShoppingCartActivity : ComponentActivity() {
         }
     }
 
-    // The bottom sheet content
+
     @Composable
     fun CartBottomSheetContent(
         cartItems: LinkedList<CartItem>,
@@ -187,22 +204,30 @@ class ShoppingCartActivity : ComponentActivity() {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.White)
+                .background(CharcoalLight)
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Your Cart", style = MaterialTheme.typography.titleLarge)
+            Text(
+                "Your Cart",
+                fontFamily = Montserrat,
+                fontWeight = FontWeight.SemiBold,
+                color = Cream,
+                fontSize = 26.sp
+            )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // If empty, show message
             if (cartItems.isEmpty()) {
-                Text("Cart is empty.")
+                Text(
+                    "Cart is empty.",
+                    fontFamily = Montserrat,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp
+                )
             } else {
-                // Otherwise, show them
                 LazyColumn(
-                    modifier = Modifier.heightIn(max = 300.dp)
+                    modifier = Modifier.heightIn(max = 460.dp)
                 ) {
-                    // Convert the LinkedList to a List for LazyColumn
                     items(cartItems.toList()) { cartItem ->
                         CartItemView(cartItem = cartItem)
                     }
@@ -211,12 +236,16 @@ class ShoppingCartActivity : ComponentActivity() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text("Pick a user to share with:", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                "Pick a user to share with:",
+                fontFamily = Montserrat,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 20.sp
+            )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // List of user emails
             LazyColumn(
-                modifier = Modifier.heightIn(max = 150.dp)
+                modifier = Modifier.heightIn(max = 270.dp)
             ) {
                 items(usersList) { email ->
                     TextButton(
@@ -237,21 +266,37 @@ class ShoppingCartActivity : ComponentActivity() {
             Spacer(modifier = Modifier.height(8.dp))
 
             Button(
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Sage,
+                    contentColor = Cream
+                ),
                 onClick = { onShareCart(cartItems.toList(), receiverEmail) },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Share Cart with $receiverEmail")
+                Text(
+                    text = "Share Cart with $receiverEmail",
+                    fontFamily = Montserrat,
+                    fontWeight = FontWeight.Bold,
+                    color = Cream, fontSize = 18.sp
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedButton(onClick = { onClose() }, modifier = Modifier.fillMaxWidth()) {
-                Text("Close Cart")
+            OutlinedButton(border = BorderStroke(2.dp, Sage),
+                onClick = { onClose() }, modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Close Cart",
+                    fontFamily = Montserrat,
+                    fontWeight = FontWeight.Bold,
+                    color = Cream,
+                    fontSize = 18.sp
+                )
             }
         }
     }
 
-    // Single article display
     @Composable
     fun ArticleItem(article: CartItem, onAddToCart: () -> Unit) {
         Row(
@@ -263,15 +308,31 @@ class ShoppingCartActivity : ComponentActivity() {
             Image(
                 painter = rememberImagePainter(article.imageUrl),
                 contentDescription = null,
-                modifier = Modifier.size(64.dp)
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(16.dp))
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(article.name, style = MaterialTheme.typography.bodyLarge)
-                Text("Price: ${article.price}", style = MaterialTheme.typography.bodyMedium)
-                Text("Stock: ${article.quantity}", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = article.name,
+                    style = MaterialTheme.typography.bodyLarge.copy(color = CreamDark)
+                )
+                Text(
+                    "Price: ${article.price}",
+                    style = MaterialTheme.typography.bodyMedium.copy(color = CreamDark)
+                )
+                Text(
+                    "Stock: ${article.quantity}",
+                    style = MaterialTheme.typography.bodySmall.copy(color = CreamDark)
+                )
             }
-            Button(onClick = onAddToCart) {
+            Button(
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Sage,
+                    contentColor = Cream
+                ), onClick = onAddToCart
+            ) {
                 Text("Add to Cart")
             }
         }
@@ -300,39 +361,42 @@ class ShoppingCartActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * Store a doc in "SharedCarts" with fields that match your DB structure.
-     * E.g.: CartId, ReceivedUserId, SharedUserId, etc.
-     */
     private fun shareCart(cartItems: List<CartItem>, receiverEmail: String) {
         val db = FirebaseFirestore.getInstance()
 
-        // Must have a current user logged in
         val currentUserId = firebaseAuth.currentUser?.uid ?: ""
         if (currentUserId.isBlank()) {
             Toast.makeText(this, "You must be logged in to share a cart", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // Find the receiver's doc in "User" by email
-        db.collection("User")
+        db.collection("users")
             .whereEqualTo("email", receiverEmail)
             .get()
             .addOnSuccessListener { snapshot ->
                 if (snapshot.isEmpty) {
-                    Toast.makeText(this, "No user found with $receiverEmail", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "No user found with $receiverEmail", Toast.LENGTH_SHORT)
+                        .show()
                     return@addOnSuccessListener
                 }
 
                 val receiverUserId = snapshot.documents.first().id
                 Log.d("ShoppingCart", "receiverUserId = $receiverUserId")
 
-                // Sample doc in "SharedCarts" with fields CartId, ReceivedUserId, SharedUserId, etc.
+                val cartItemsData = cartItems.map {
+                    mapOf(
+                        "name" to it.name,
+                        "price" to it.price,
+                        "quantity" to it.quantity,
+                        "imageUrl" to it.imageUrl
+                    )
+                }
+
                 val cartData = hashMapOf(
-                    "CartId" to "someCartId",
+                    "CartId" to UUID.randomUUID().toString(),
                     "ReceivedUserId" to receiverUserId,
-                    "SharedUserId" to currentUserId
-                    // You can also store the actual items if you want
+                    "SharedUserId" to currentUserId,
+                    "items" to cartItemsData
                 )
 
                 db.collection("SharedCarts").add(cartData)
@@ -344,7 +408,7 @@ class ShoppingCartActivity : ComponentActivity() {
                     }
             }
             .addOnFailureListener { e ->
-                Toast.makeText(this, "Error searching for $receiverEmail: $e", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Failed to find receiver: $e", Toast.LENGTH_SHORT).show()
             }
     }
 

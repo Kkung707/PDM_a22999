@@ -5,13 +5,17 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberImagePainter
+import com.example.ecommerce.ui.Montserrat
 import com.google.firebase.firestore.FirebaseFirestore
 
 data class ArticleUI(
@@ -35,8 +39,14 @@ fun ManageArticlesScreen() {
     var price by remember { mutableStateOf("") }
     var quantity by remember { mutableStateOf("") }
     var imageUrl by remember { mutableStateOf("") }
-    val priceValue = price.toDoubleOrNull() ?: 0.0
-    val quantityValue = quantity.toIntOrNull() ?: 0
+
+    fun resetForm() {
+        name = ""
+        price = ""
+        quantity = ""
+        imageUrl = ""
+        editDocId = null
+    }
 
     LaunchedEffect(Unit) {
         firestore.collection("Articles")
@@ -72,7 +82,8 @@ fun ManageArticlesScreen() {
     ) {
         Text(
             text = "Manage Articles",
-            style = MaterialTheme.typography.headlineMedium
+            fontFamily = Montserrat,
+            fontWeight = FontWeight.SemiBold
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -90,7 +101,8 @@ fun ManageArticlesScreen() {
             value = price,
             onValueChange = { price = it },
             label = { Text("Price") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -99,7 +111,8 @@ fun ManageArticlesScreen() {
             value = quantity,
             onValueChange = { quantity = it },
             label = { Text("Quantity in Stock") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -113,7 +126,6 @@ fun ManageArticlesScreen() {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // If editDocId != null, we're editing. Otherwise we're adding new.
         val isEditing = (editDocId != null)
 
         Button(
@@ -122,7 +134,6 @@ fun ManageArticlesScreen() {
                 val parsedQty = quantity.toIntOrNull() ?: 0
 
                 if (isEditing) {
-                    // Update the doc
                     val docId = editDocId ?: return@Button
                     val updates = mapOf(
                         "name" to name,
@@ -135,16 +146,11 @@ fun ManageArticlesScreen() {
                         .update(updates)
                         .addOnSuccessListener {
                             Toast.makeText(context, "Article updated!", Toast.LENGTH_SHORT).show()
-                            editDocId = null
-                            name = ""
-                            price = ""
-                            quantity = ""
-                            imageUrl = ""
+                            resetForm()
                         }
                         .addOnFailureListener { e ->
                             Toast.makeText(context, "Error: $e", Toast.LENGTH_SHORT).show()
                         }
-
                 } else {
                     val data = mapOf(
                         "name" to name,
@@ -156,11 +162,7 @@ fun ManageArticlesScreen() {
                         .add(data)
                         .addOnSuccessListener {
                             Toast.makeText(context, "Article added!", Toast.LENGTH_SHORT).show()
-                            // Reset form
-                            name = ""
-                            price = 0.0.toString()
-                            quantity = 0.toString()
-                            imageUrl = ""
+                            resetForm()
                         }
                         .addOnFailureListener { e ->
                             Toast.makeText(context, "Error: $e", Toast.LENGTH_SHORT).show()
@@ -175,13 +177,7 @@ fun ManageArticlesScreen() {
         if (isEditing) {
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedButton(
-                onClick = {
-                    editDocId = null
-                    name = ""
-                    price = ""
-                    quantity = ""
-                    imageUrl = ""
-                },
+                onClick = { resetForm() },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Cancel Edit")
@@ -213,7 +209,6 @@ fun ManageArticlesScreen() {
                         imageUrl = article.imageUrl
                     },
                     onDelete = {
-                        // Delete doc
                         firestore.collection("Articles")
                             .document(article.docId)
                             .delete()
@@ -242,7 +237,6 @@ fun ManageArticleRow(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // If you like, show the image
             Image(
                 painter = rememberImagePainter(article.imageUrl),
                 contentDescription = article.name,
