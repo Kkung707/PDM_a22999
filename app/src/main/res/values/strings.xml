@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">ecommerce</string>
+    <string name="title_activity_main" />
+    <string name="title_activity_reacived_cart" />
+    <string name="title_activity_shopping_cart" />
+    <string name="title_activity_home" />
+    <string name="title_activity_sign_up" />
+    <string name="title_activity_login" />
+    <string name="title_activity_manage_articles">ManageArticlesActivity</string>
+</resources>
