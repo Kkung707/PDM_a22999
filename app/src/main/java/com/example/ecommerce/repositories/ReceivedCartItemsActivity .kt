@@ -2,7 +2,6 @@ package com.example.ecommerce.repositories
 
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
@@ -34,7 +33,6 @@ import com.example.ecommerce.ui.MyApplicationTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
-
 class ReceivedCartItemsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,13 +56,14 @@ private fun fetchUserCart(
 ) {
     val db = FirebaseFirestore.getInstance()
 
-    db.collection("Carts")
-        .whereEqualTo("userId", userId)
+    db.collection("SharedCarts")
+        .whereEqualTo("ReceivedUserId", userId)
         .get()
         .addOnSuccessListener { querySnapshot ->
             if (!querySnapshot.isEmpty) {
                 val cartDocument = querySnapshot.documents.first()
                 val items = cartDocument.get("items") as? List<Map<String, Any>> ?: emptyList()
+                println("items --------------------------------$items")
                 val cartItems = items.map {
                     CartItem(
                         name = it["name"] as String,
@@ -73,6 +72,7 @@ private fun fetchUserCart(
                         imageUrl = it["imageUrl"] as String
                     )
                 }
+                println("items --------------------------------$items")
                 onResult(cartItems)
             } else {
                 onResult(emptyList())
@@ -80,17 +80,21 @@ private fun fetchUserCart(
         }
         .addOnFailureListener { e ->
             onError("Error fetching cart: ${e.message}")
+            println("items --------------------------------deu ruim")
             Log.e("FetchCart", "Error fetching cart: ${e.message}")
         }
 }
+
+
 
 @Composable
 fun ReceivedCartItemsScreen(userId: String) {
     val context = LocalContext.current
     var receivedCarts by remember { mutableStateOf<List<CartItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String>("") }
+    var errorMessage by remember { mutableStateOf("") }
 
+    println("userid ---------------- $userId")
     LaunchedEffect(userId) {
         if (userId.isNotEmpty()) {
             fetchUserCart(
@@ -115,7 +119,6 @@ fun ReceivedCartItemsScreen(userId: String) {
             .fillMaxSize()
             .padding(10.dp)
             .background(Ebony)
-            .verticalScroll(rememberScrollState())
     ) {
         Spacer(modifier = Modifier.height(35.dp))
         Text(
@@ -145,7 +148,7 @@ fun ReceivedCartItemsScreen(userId: String) {
                     color = Cream
                 )
             } else {
-                LazyColumn {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(receivedCarts) { cartItem ->
                         CartItemView(cartItem = cartItem)
                     }
